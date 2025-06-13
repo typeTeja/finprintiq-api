@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+jinja2
+aiofiles
+python-multipart
+sqlalchemy
+pymysql
+python-dotenv
+openai>=1.0.0
+pandas
+PyMuPDF
+pydantic-settings

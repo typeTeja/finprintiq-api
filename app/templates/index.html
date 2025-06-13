@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinPrintIQ - Credit Card Agreement Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header class="mb-6">
+      <h1>FinPrintIQ</h1>
+      <p class="text-light">Extract and analyze credit card agreement data</p>
+    </header>
+
+    <div id="alerts"></div>
+
+    <div class="card">
+      <h2>Upload Credit Card Agreements</h2>
+      <p class="mb-4">Upload a ZIP file containing PDF credit card agreements to extract and analyze the data.</p>
+      
+      <form id="upload-form">
+        <div class="sm:flex sm:gap-4">
+          <div class="form-group sm:w-1/4">
+            <label for="quarter">Quarter</label>
+            <select name="quarter" id="quarter" required>
+              <option value="">Select Quarter</option>
+              <option value="Q1">Q1 (Jan - Mar)</option>
+              <option value="Q2">Q2 (Apr - Jun)</option>
+              <option value="Q3">Q3 (Jul - Sep)</option>
+              <option value="Q4">Q4 (Oct - Dec)</option>
+            </select>
+          </div>
+          
+          <div class="form-group sm:w-1/4">
+            <label for="year">Year</label>
+            <input type="number" id="year" name="year" value="{{ current_year }}" min="2000" max="2100" required>
+          </div>
+          
+          <div class="form-group sm:w-1/2">
+            <label for="zip_file">ZIP File</label>
+            <input type="file" id="zip_file" name="zip_file" accept=".zip" required>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center mt-6">
+          <button type="submit" class="btn btn-primary" id="upload-btn">
+            <span id="upload-text">Upload & Process</span>
+            <span id="upload-spinner" class="loading hidden"></span>
+          </button>
+        </div>
+      </form>
+
+      <div class="progress-container" id="progress-container">
+        <div class="progress-header">
+          <div class="progress-status">
+            <span class="status-indicator processing" id="status-indicator"></span>
+            <span id="status-text">Processing Files</span>
+          </div>
+          <div class="text-sm text-light" id="progress-percent">0%</div>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-details">
+          <span id="progress-message">Starting upload...</span>
+          <span id="progress-eta"></span>
+        </div>
+        <div class="progress-files" id="progress-files">
+          <div class="flex items-center justify-between text-sm text-light">
+            <span>Current file: <span id="current-file" class="font-medium">-</span></span>
+            <span><span id="processed-files">0</span> of <span id="total-files">0</span> files processed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex justify-between items-center mb-4">
+        <h2>Extracted Data</h2>
+        <div class="flex gap-4">
+          <div class="flex items-center gap-2">
+            <select id="filter-quarter">
+              <option value="">All Quarters</option>
+              <option value="Q1">Q1</option>
+              <option value="Q2">Q2</option>
+              <option value="Q3">Q3</option>
+              <option value="Q4">Q4</option>
+            </select>
+            <input type="number" id="filter-year" placeholder="Year" value="{{ current_year }}" min="2000" max="2100">
+            <button id="filter-btn" class="btn btn-secondary">Filter</button>
+          </div>
+          <a href="/export" class="btn btn-success">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+            Export Excel
+          </a>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Issuer</th>
+              <th>Card Name</th>
+              <th>Min APR</th>
+              <th>Max APR</th>
+              <th>Late Fee</th>
+              <th>Foreign Fee</th>
+              <th>Quarter</th>
+              <th>Year</th>
+            </tr>
+          </thead>
+          <tbody id="data-body">
+            <tr>
+              <td colspan="8" class="text-center py-4 text-light">No data available. Upload files to get started.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const alertsContainer = document.getElementById('alerts');
+      const uploadForm = document.getElementById('upload-form');
+      const progressContainer = document.getElementById('progress-container');
+      const progressFill = document.getElementById('progress-fill');
+      const progressPercent = document.getElementById('progress-percent');
+      const processingText = document.getElementById('processing-text');
+      const uploadBtn = document.getElementById('upload-btn');
+      const uploadText = document.getElementById('upload-text');
+      const uploadSpinner = document.getElementById('upload-spinner');
+
+      // Show alert message
+      function showAlert(message, type = 'success') {
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.innerHTML = `
+          <div class="flex items-center">
+            <span>${message}</span>
+            <button class="ml-auto" onclick="this.parentElement.parentElement.remove()">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        `;
+        alertsContainer.prepend(alert);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+          alert.style.opacity = '0';
+          setTimeout(() => alert.remove(), 300);
+        }, 5000);
+      }
+
+      // Update progress bar
+      function updateProgress(percent) {
+        progressFill.style.width = `${percent}%`;
+        progressPercent.textContent = `${percent}%`;
+      }
+
+      // Update progress UI
+      function updateProgressUI(progress) {
+        // Update progress bar
+        const percent = progress.progress || 0;
+        progressFill.style.width = `${percent}%`;
+        progressPercent.textContent = `${percent}%`;
+        
+        // Update status indicator
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        
+        // Update status based on progress
+        if (progress.status === 'processing') {
+          statusIndicator.className = 'status-indicator processing';
+          statusText.textContent = 'Processing Files';
+        } else if (progress.status === 'completed') {
+          statusIndicator.className = 'status-indicator completed';
+          statusText.textContent = 'Processing Complete';
+        } else if (progress.status === 'failed') {
+          statusIndicator.className = 'status-indicator failed';
+          statusText.textContent = 'Processing Failed';
+        }
+        
+        // Update progress details
+        const progressMessage = document.getElementById('progress-message');
+        const progressEta = document.getElementById('progress-eta');
+        const currentFile = document.getElementById('current-file');
+        const processedFiles = document.getElementById('processed-files');
+        const totalFiles = document.getElementById('total-files');
+        
+        if (progress.message) progressMessage.textContent = progress.message;
+        
+        if (progress.eta_seconds > 0) {
+          const minutes = Math.floor(progress.eta_seconds / 60);
+          const seconds = progress.eta_seconds % 60;
+          progressEta.textContent = `ETA: ${minutes}m ${seconds}s`;
+        } else {
+          progressEta.textContent = '';
+        }
+        
+        if (progress.current_file) {
+          currentFile.textContent = progress.current_file;
+        }
+        
+        if (progress.processed_files !== undefined) {
+          processedFiles.textContent = progress.processed_files;
+        }
+        
+        if (progress.total_files !== undefined) {
+          totalFiles.textContent = progress.total_files;
+        }
+        
+        // If processing is complete, show success message and refresh data
+        if (progress.status === 'completed') {
+          showAlert('All files have been processed successfully!', 'success');
+          loadData();
+        } else if (progress.status === 'failed') {
+          showAlert(progress.message || 'Processing failed. Please try again.', 'danger');
+        }
+      }
+      
+      // Connect to SSE endpoint for progress updates
+      function connectToProgressStream(uploadId) {
+        const eventSource = new EventSource(`/progress/${uploadId}`);
+        
+        eventSource.onmessage = (event) => {
+          try {
+            const progress = JSON.parse(event.data);
+            updateProgressUI(progress);
+            
+            // If processing is complete, close the connection
+            if (progress.status === 'completed' || progress.status === 'failed') {
+              eventSource.close();
+              // Re-enable form after a short delay
+              setTimeout(resetUploadForm, 2000);
+            }
+          } catch (e) {
+            console.error('Error parsing progress update:', e);
+          }
+        };
+        
+        eventSource.onerror = (error) => {
+          console.error('EventSource failed:', error);
+          eventSource.close();
+          showAlert('Connection to progress updates lost. The file is still processing in the background.', 'warning');
+        };
+        
+        return eventSource;
+      }
+      
+      // File upload handler
+      uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('zip_file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+          showAlert('Please select a ZIP file to upload', 'danger');
+          return;
+        }
+        
+        if (file.type !== 'application/zip' && !file.name.endsWith('.zip')) {
+          showAlert('Please select a valid ZIP file', 'danger');
+          return;
+        }
+        
+        const formData = new FormData(this);
+        
+        try {
+          // Reset and show progress
+          progressContainer.classList.add('visible');
+          
+          // Disable form during upload
+          uploadBtn.disabled = true;
+          uploadText.textContent = 'Uploading...';
+          uploadSpinner.classList.remove('hidden');
+          
+          const xhr = new XMLHttpRequest();
+          let eventSource = null;
+          
+          // Upload progress
+          xhr.upload.addEventListener('progress', function(e) {
+            if (e.lengthComputable) {
+              const percent = Math.round((e.loaded / e.total) * 100);
+              updateProgressUI({
+                status: 'processing',
+                progress: Math.min(percent, 99), // Cap at 99% until processing starts
+                message: `Uploading file... (${percent}%)`
+              });
+            }
+          });
+          
+          // Load complete
+          xhr.addEventListener('load', function() {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              const response = JSON.parse(xhr.responseText);
+              showAlert(response.message || 'Files uploaded and processing started', 'success');
+              
+              // Update UI to show processing has started
+              updateProgressUI({
+                status: 'processing',
+                progress: 0,
+                message: 'Processing files with OpenAI...'
+              });
+              
+              // Connect to progress updates
+              if (response.upload_id) {
+                eventSource = connectToProgressStream(response.upload_id);
+              } else {
+                // Fallback to polling if SSE is not available
+                setTimeout(loadData, 5000);
+                resetUploadForm();
+              }
+              
+            } else {
+              let errorMessage = 'Upload failed';
+              try {
+                const errorResponse = JSON.parse(xhr.responseText);
+                errorMessage = errorResponse.detail || errorMessage;
+              } catch (e) {
+                // Use default error message
+              }
+              showAlert(errorMessage, 'danger');
+              resetUploadForm();
+            }
+          });
+          
+          // Error handling
+          xhr.addEventListener('error', function() {
+            showAlert('An error occurred during upload. Please try again.', 'danger');
+            resetUploadForm();
+          });
+          
+          // Send request
+          xhr.open('POST', '/upload', true);
+          xhr.send(formData);
+          
+        } catch (error) {
+          console.error('Upload error:', error);
+          showAlert('An error occurred. Please try again.', 'danger');
+          resetUploadForm();
+        }
+      });
+      
+      // Reset upload form to initial state
+      function resetUploadForm() {
+        uploadBtn.disabled = false;
+        uploadText.textContent = 'Upload & Process';
+        uploadSpinner.classList.add('hidden');
+        
+        // Don't hide the progress container immediately when processing starts
+        // It will be hidden by the progress update when processing is complete
+        if (!progressContainer.classList.contains('visible')) {
+          progressContainer.classList.remove('visible');
+        }
+      }
+      
+      // Load data into table
+      async function loadData() {
+        const quarter = document.getElementById('filter-quarter').value;
+        const year = document.getElementById('filter-year').value;
+        
+        try {
+          const response = await fetch(`/data?quarter=${encodeURIComponent(quarter)}&year=${encodeURIComponent(year)}`);
+          const data = await response.json();
+          
+          const tbody = document.getElementById('data-body');
+          
+          if (!data || data.length === 0) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="8" class="text-center py-4 text-light">No data available</td>
+              </tr>
+            `;
+            return;
+          }
+          
+          tbody.innerHTML = data.map(item => `
+            <tr>
+              <td>${escapeHtml(item.issuer || 'N/A')}</td>
+              <td>${escapeHtml(item.card_name || 'N/A')}</td>
+              <td>${escapeHtml(item.min_apr || 'N/A')}</td>
+              <td>${escapeHtml(item.max_apr || 'N/A')}</td>
+              <td>${escapeHtml(item.late_fee || 'N/A')}</td>
+              <td>${escapeHtml(item.foreign_txn_fee || 'N/A')}</td>
+              <td>${escapeHtml(item.quarter || 'N/A')}</td>
+              <td>${escapeHtml(item.year || 'N/A')}</td>
+            </tr>
+          `).join('');
+          
+        } catch (error) {
+          console.error('Error loading data:', error);
+          showAlert('Failed to load data. Please try again.', 'danger');
+        }
+      }
+      
+      // Helper to escape HTML
+      function escapeHtml(unsafe) {
+        if (unsafe === null || unsafe === undefined) return 'N/A';
+        return unsafe.toString()
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+      
+      // Event listeners for filter controls
+      document.getElementById('filter-btn').addEventListener('click', loadData);
+      document.getElementById('filter-quarter').addEventListener('change', loadData);
+      document.getElementById('filter-year').addEventListener('change', loadData);
+      
+      // Load initial data
+      loadData();
+    });
+  </script>
+</body>
+</html>
