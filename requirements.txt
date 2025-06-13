@@ -6,7 +6,7 @@ python-multipart
 sqlalchemy
 pymysql
 python-dotenv
-openai>=1.0.0
+openai
 pandas
 PyMuPDF
 pydantic-settings
