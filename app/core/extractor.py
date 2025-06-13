@@ -1,5 +1,6 @@
 import os
 import zipfile
+import shutil
 import fitz  # PyMuPDF
 import json
 import time
@@ -204,22 +205,40 @@ async def process_zip_with_progress(zip_path: str, quarter: str, year: int, uplo
             
         # Clean up all temporary files
         try:
+            print(f"Starting cleanup process...")
+            
             # Remove the uploaded zip file
             if os.path.exists(zip_path):
+                print(f"Removing zip file: {zip_path}")
                 os.remove(zip_path)
-                
+                print(f"Successfully removed zip file")
+            
             # Remove the extracted files directory if it exists
             if os.path.exists(settings.EXTRACT_DIR):
+                print(f"Removing extracted files from: {settings.EXTRACT_DIR}")
+                # First, ensure all files are writable
+                for root, dirs, files in os.walk(settings.EXTRACT_DIR):
+                    for name in files:
+                        file_path = os.path.join(root, name)
+                        try:
+                            os.chmod(file_path, 0o777)  # Make file writable
+                        except Exception as e:
+                            print(f"Warning: Could not change permissions for {file_path}: {e}")
+                # Then remove the directory tree
                 shutil.rmtree(settings.EXTRACT_DIR, ignore_errors=True)
-                
+                print(f"Successfully removed extracted files directory")
+            
             # Also clean up any files in the uploads directory (as a safety measure)
             uploads_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads')
             if os.path.exists(uploads_dir):
+                print(f"Cleaning up uploads directory: {uploads_dir}")
                 for filename in os.listdir(uploads_dir):
                     file_path = os.path.join(uploads_dir, filename)
                     try:
                         if os.path.isfile(file_path):
+                            os.chmod(file_path, 0o777)  # Make file writable
                             os.unlink(file_path)
+                            print(f"Removed file: {file_path}")
                     except Exception as e:
                         print(f"Error deleting {file_path}: {e}")
                         
