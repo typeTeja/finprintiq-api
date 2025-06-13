@@ -201,12 +201,33 @@ async def process_zip_with_progress(zip_path: str, quarter: str, year: int, uplo
         # Clean up resources
         if db:
             db.close()
-        # Remove the uploaded zip file
+            
+        # Clean up all temporary files
         try:
+            # Remove the uploaded zip file
             if os.path.exists(zip_path):
                 os.remove(zip_path)
+                
+            # Remove the extracted files directory if it exists
+            if os.path.exists(settings.EXTRACT_DIR):
+                shutil.rmtree(settings.EXTRACT_DIR, ignore_errors=True)
+                
+            # Also clean up any files in the uploads directory (as a safety measure)
+            uploads_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'uploads')
+            if os.path.exists(uploads_dir):
+                for filename in os.listdir(uploads_dir):
+                    file_path = os.path.join(uploads_dir, filename)
+                    try:
+                        if os.path.isfile(file_path):
+                            os.unlink(file_path)
+                    except Exception as e:
+                        print(f"Error deleting {file_path}: {e}")
+                        
         except Exception as e:
-            print(f"Error cleaning up zip file: {str(e)}")
+            print(f"Error during cleanup: {str(e)}")
+            # Update progress with cleanup error if processing was successful
+            if upload_id in progress_store and progress_store[upload_id].get("status") == "completed":
+                progress_store[upload_id]["message"] += " (Note: Some temporary files might not have been cleaned up properly)"
 
 def process_pdf_file(pdf_path: str, quarter: str, year: int, db: SessionLocal, filename: str = None):
     """Process a single PDF file and save to database"""
