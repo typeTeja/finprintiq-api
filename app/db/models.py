@@ -8,12 +8,16 @@ class ExtractedCard(Base):
     __tablename__ = "extracted_cards"
 
     id = Column(Integer, primary_key=True, index=True)
-    quarter = Column(String(2), nullable=False)
-    year = Column(Integer, nullable=False)
-    source_filename = Column(String(255), nullable=False)
-
+    issuer_id = Column(Integer, nullable=True)
+    card_id = Column(Integer, nullable=True)
     issuer = Column(String(255), nullable=True)
     card_name = Column(String(255), nullable=True)
+    promote_year = Column(Integer, nullable=True)
+    promote_quarter = Column(String(2), nullable=True)
+    quarter = Column(String(2), nullable=True)
+    year = Column(Integer, nullable=True)
+    source_filename = Column(String(255), nullable=True)
+
     min_apr = Column(String(50), nullable=True)
     max_apr = Column(String(50), nullable=True)
     penalty_apr = Column(String(255), nullable=True)
@@ -23,9 +27,24 @@ class ExtractedCard(Base):
     cash_advance_fee = Column(String(255), nullable=True)
     balance_transfer_fee = Column(String(255), nullable=True)
     min_interest_charge = Column(String(255), nullable=True)
+    
+    base_score = Column(Integer, nullable=True)
+    trend_bonus = Column(Integer, nullable=True)
+    volatility_score = Column(Integer, nullable=True)
+    volatility_penalty = Column(Integer, nullable=True)
+    final_score = Column(Integer, nullable=True)
+    grade = Column(String(255), nullable=True)
 
     rewards = Column(Text, nullable=True)
     exclusions = Column(Text, nullable=True)
 
-    extraction_date = Column(DateTime, default=datetime.utcnow)
+    extraction_date = Column(DateTime, default=datetime.utcnow) 
     verified = Column(Boolean, default=False)
+
+    card_type = Column(String(255), nullable=True)
+    institution_type = Column(String(255), nullable=True)
+    change_description = Column(String(255), nullable=True)
+    change_type = Column(String(255), nullable=True)
+    notable_exclusions = Column(Text, nullable=True)
+    fee_structure = Column(Text, nullable=True)
+    rewards_structure = Column(Text, nullable=True)

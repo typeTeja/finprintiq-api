@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 gunicorn
 jinja2
 aiofiles
@@ -11,3 +11,8 @@ openai
 pandas
 PyMuPDF
 pydantic-settings
+pydantic
+python-dateutil
+anyio
+httpx
+click

@@ -73,6 +73,12 @@ def ask_openai(text: str) -> dict:
 - Minimum Interest Charge ($)
 - Rewards Structure
 - Notable Exclusions
+- Card type
+- Institution type
+- Change Description
+- Change type
+- Fee structure
+- Rewards structure
 
 Return only a JSON object. Use "Not disclosed" for missing fields."""
     response = client.chat.completions.create(
@@ -273,7 +279,14 @@ def process_pdf_file(pdf_path: str, quarter: str, year: int, db: SessionLocal, f
         min_interest_charge=clean_field(data.get("Minimum Interest Charge ($)")),
         rewards=clean_field(data.get("Rewards Structure")),
         exclusions=clean_field(data.get("Notable Exclusions")),
-        extraction_date=datetime.utcnow()
+        extraction_date=datetime.now(),
+        card_type=clean_field(data.get("Card type")),
+        institution_type=clean_field(data.get("Institution type")),
+        change_description=clean_field(data.get("Change Description")),
+        change_type=clean_field(data.get("Change type")),
+        fee_structure=clean_field(data.get("Fee structure")),
+        rewards_structure=clean_field(data.get("Rewards structure"))
+
     )
     db.add(card)
     db.commit()
