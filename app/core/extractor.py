@@ -11,7 +11,10 @@ from openai import OpenAI
 
 from app.core.config import settings
 from app.db.database import SessionLocal
+from sqlalchemy.orm import Session
 from app.db.models import ExtractedCard
+from app.core.utils import get_card_and_issuer_ids
+
 
 client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
@@ -254,20 +257,196 @@ async def process_zip_with_progress(zip_path: str, quarter: str, year: int, uplo
             if upload_id in progress_store and progress_store[upload_id].get("status") == "completed":
                 progress_store[upload_id]["message"] += " (Note: Some temporary files might not have been cleaned up properly)"
 
-def process_pdf_file(pdf_path: str, quarter: str, year: int, db: SessionLocal, filename: str = None):
-    """Process a single PDF file and save to database"""
+# def process_pdf_file(pdf_path: str, quarter: str, year: int, db: SessionLocal, filename: str = None):
+#     """Process a single PDF file and save to database"""
+#     if filename is None:
+#         filename = os.path.basename(pdf_path)
+        
+#     text = extract_text_from_pdf(pdf_path)
+#     data = ask_openai(text)
+    
+#     card = ExtractedCard(
+#         quarter=quarter,
+#         year=year,
+#         source_filename=filename,
+#         issuer=clean_field(data.get("Issuer")),
+#         card_name=clean_field(data.get("Card Name")),
+#         min_apr=clean_field(data.get("Min APR (%)")),
+#         max_apr=clean_field(data.get("Max APR (%)")),
+#         penalty_apr=clean_field(data.get("Penalty APR (%)")),
+#         annual_fee=clean_field(data.get("Annual Fee ($)")),
+#         late_fee=clean_field(data.get("Late Fee ($)")),
+#         foreign_txn_fee=clean_field(data.get("Foreign Transaction Fee (%)")),
+#         cash_advance_fee=clean_field(data.get("Cash Advance Fee (%)")),
+#         balance_transfer_fee=clean_field(data.get("Balance Transfer Fee (%)")),
+#         min_interest_charge=clean_field(data.get("Minimum Interest Charge ($)")),
+#         rewards=clean_field(data.get("Rewards Structure")),
+#         exclusions=clean_field(data.get("Notable Exclusions")),
+#         extraction_date=datetime.now(),
+#         card_type=clean_field(data.get("Card type")),
+#         institution_type=clean_field(data.get("Institution type")),
+#         change_description=clean_field(data.get("Change Description")),
+#         change_type=clean_field(data.get("Change type")),
+#         fee_structure=clean_field(data.get("Fee structure")),
+#         rewards_structure=clean_field(data.get("Rewards structure"))
+
+#     )
+#     db.add(card)
+#     db.commit()
+# def process_pdf_file(pdf_path: str, quarter: str, year: int, db: Session, filename: str = None):
+#     if filename is None:
+#         filename = os.path.basename(pdf_path)
+
+#     text = extract_text_from_pdf(pdf_path)
+#     data = ask_openai(text)
+
+#     issuer_name = clean_field(data.get("Issuer"))
+#     card_name = clean_field(data.get("Card Name"))
+
+#     # Get IDs from other backend's cards table
+#     issuer_id, card_id = get_card_and_issuer_ids(db, issuer_name, card_name)
+
+#     card = ExtractedCard(
+#         quarter=quarter,
+#         year=year,
+#         source_filename=filename,
+#         issuer=issuer_name,
+#         card_name=card_name,
+#         issuer_id=issuer_id,
+#         card_id=card_id,
+#         min_apr=clean_field(data.get("Min APR (%)")),
+#         max_apr=clean_field(data.get("Max APR (%)")),
+#         penalty_apr=clean_field(data.get("Penalty APR (%)")),
+#         annual_fee=clean_field(data.get("Annual Fee ($)")),
+#         late_fee=clean_field(data.get("Late Fee ($)")),
+#         foreign_txn_fee=clean_field(data.get("Foreign Transaction Fee (%)")),
+#         cash_advance_fee=clean_field(data.get("Cash Advance Fee (%)")),
+#         balance_transfer_fee=clean_field(data.get("Balance Transfer Fee (%)")),
+#         min_interest_charge=clean_field(data.get("Minimum Interest Charge ($)")),
+#         rewards=clean_field(data.get("Rewards Structure")),
+#         exclusions=clean_field(data.get("Notable Exclusions")),
+#         extraction_date=datetime.utcnow()
+#     )
+
+#     db.add(card)
+#     db.commit()
+# def process_pdf_file(pdf_path: str, quarter: str, year: int, db: Session, filename: str = None):
+#     if filename is None:
+#         filename = os.path.basename(pdf_path)
+
+#     text = extract_text_from_pdf(pdf_path)
+#     data = ask_openai(text)
+
+#     issuer_name = clean_field(data.get("Issuer"))
+#     card_name = clean_field(data.get("Card Name"))
+
+#     # Get IDs from other backend's cards table
+#     issuer_id, card_id = get_card_and_issuer_ids(db, issuer_name, card_name)
+
+#     # Try to find existing record (match by filename, quarter, year, card name, issuer)
+#     existing = db.query(ExtractedCard).filter_by(
+#         card_name=card_name,
+#         issuer=issuer_name,
+#         source_filename=filename,
+#         quarter=quarter,
+#         year=year
+#     ).first()
+
+#     if existing:
+#         # Update existing record
+#         existing.issuer_id = issuer_id
+#         existing.card_id = card_id
+#         existing.min_apr = clean_field(data.get("Min APR (%)"))
+#         existing.max_apr = clean_field(data.get("Max APR (%)"))
+#         existing.penalty_apr = clean_field(data.get("Penalty APR (%)"))
+#         existing.annual_fee = clean_field(data.get("Annual Fee ($)"))
+#         existing.late_fee = clean_field(data.get("Late Fee ($)"))
+#         existing.foreign_txn_fee = clean_field(data.get("Foreign Transaction Fee (%)"))
+#         existing.cash_advance_fee = clean_field(data.get("Cash Advance Fee (%)"))
+#         existing.balance_transfer_fee = clean_field(data.get("Balance Transfer Fee (%)"))
+#         existing.min_interest_charge = clean_field(data.get("Minimum Interest Charge ($)"))
+#         existing.rewards = clean_field(data.get("Rewards Structure"))
+#         existing.exclusions = clean_field(data.get("Notable Exclusions"))
+#         existing.card_type = clean_field(data.get("Card type"))
+#         existing.institution_type = clean_field(data.get("Institution type"))
+#         existing.change_description = clean_field(data.get("Change Description"))
+#         existing.change_type = clean_field(data.get("Change type"))
+#         existing.fee_structure = clean_field(data.get("Fee structure"))
+#         existing.rewards_structure = clean_field(data.get("Rewards structure"))
+#         existing.extraction_date = datetime.utcnow()
+#     else:
+#         # Insert new record
+#         card = ExtractedCard(
+#             quarter=quarter,
+#             year=year,
+#             source_filename=filename,
+#             issuer=issuer_name,
+#             card_name=card_name,
+#             issuer_id=issuer_id,
+#             card_id=card_id,
+#             min_apr=clean_field(data.get("Min APR (%)")),
+#             max_apr=clean_field(data.get("Max APR (%)")),
+#             penalty_apr=clean_field(data.get("Penalty APR (%)")),
+#             annual_fee=clean_field(data.get("Annual Fee ($)")),
+#             late_fee=clean_field(data.get("Late Fee ($)")),
+#             foreign_txn_fee=clean_field(data.get("Foreign Transaction Fee (%)")),
+#             cash_advance_fee=clean_field(data.get("Cash Advance Fee (%)")),
+#             balance_transfer_fee=clean_field(data.get("Balance Transfer Fee (%)")),
+#             min_interest_charge=clean_field(data.get("Minimum Interest Charge ($)")),
+#             rewards=clean_field(data.get("Rewards Structure")),
+#             exclusions=clean_field(data.get("Notable Exclusions")),
+#             extraction_date=datetime.utcnow(),
+#             card_type=clean_field(data.get("Card type")),
+#             institution_type=clean_field(data.get("Institution type")),
+#             change_description=clean_field(data.get("Change Description")),
+#             change_type=clean_field(data.get("Change type")),
+#             fee_structure=clean_field(data.get("Fee structure")),
+#             rewards_structure=clean_field(data.get("Rewards structure"))
+#         )
+#         db.add(card)
+
+#     db.commit()
+
+def process_pdf_file(pdf_path: str, quarter: str, year: int, db: Session, filename: str = None):
     if filename is None:
         filename = os.path.basename(pdf_path)
-        
+
     text = extract_text_from_pdf(pdf_path)
     data = ask_openai(text)
-    
-    card = ExtractedCard(
+
+    issuer_name = clean_field(data.get("Issuer"))
+    card_name = clean_field(data.get("Card Name"))
+
+    # Fetch IDs from external backend's table
+    issuer_id, card_id = get_card_and_issuer_ids(db, issuer_name, card_name)
+
+    # 🔍 Try to find an existing record (already inserted previously)
+    existing = db.query(ExtractedCard).filter_by(
+        issuer=issuer_name,
+        card_name=card_name,
         quarter=quarter,
         year=year,
         source_filename=filename,
-        issuer=clean_field(data.get("Issuer")),
-        card_name=clean_field(data.get("Card Name")),
+    ).first()
+
+    if existing:
+        # 🔄 Update IDs if missing
+        if not existing.issuer_id and issuer_id:
+            existing.issuer_id = issuer_id
+        if not existing.card_id and card_id:
+            existing.card_id = card_id
+        db.commit()
+        return  # ✅ Exit early, no duplicate insert
+
+    # 🆕 If not exists, create new
+    new_card = ExtractedCard(
+        quarter=quarter,
+        year=year,
+        source_filename=filename,
+        issuer=issuer_name,
+        card_name=card_name,
+        issuer_id=issuer_id,
+        card_id=card_id,
         min_apr=clean_field(data.get("Min APR (%)")),
         max_apr=clean_field(data.get("Max APR (%)")),
         penalty_apr=clean_field(data.get("Penalty APR (%)")),
@@ -279,15 +458,18 @@ def process_pdf_file(pdf_path: str, quarter: str, year: int, db: SessionLocal, f
         min_interest_charge=clean_field(data.get("Minimum Interest Charge ($)")),
         rewards=clean_field(data.get("Rewards Structure")),
         exclusions=clean_field(data.get("Notable Exclusions")),
-        extraction_date=datetime.now(),
+        extraction_date=datetime.utcnow(),
         card_type=clean_field(data.get("Card type")),
         institution_type=clean_field(data.get("Institution type")),
         change_description=clean_field(data.get("Change Description")),
         change_type=clean_field(data.get("Change type")),
         fee_structure=clean_field(data.get("Fee structure")),
         rewards_structure=clean_field(data.get("Rewards structure"))
-
     )
-    db.add(card)
+
+    db.add(new_card)
     db.commit()
+
+
+
     # optionally clean up extracted files
