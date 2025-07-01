@@ -11,6 +11,9 @@ from app.core.config import settings
 from app.core.extractor import process_zip_with_progress
 from app.db.database import init_db, SessionLocal
 from app.db.crud import fetch_filtered_data, export_to_excel
+from fastapi.exceptions import RequestValidationError
+from fastapi.requests import Request
+from fastapi.responses import JSONResponse
 
 # In-memory storage for progress (in production, use Redis or similar)
 progress_store: Dict[str, Dict[str, Any]] = {}
@@ -19,6 +22,16 @@ progress_store: Dict[str, Dict[str, Any]] = {}
 init_db()
 
 app = FastAPI()
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=400,
+        content={
+            "detail": exc.errors(),
+            "body": exc.body
+        }
+    )
 
 # Enable CORS for development
 app.add_middleware(
