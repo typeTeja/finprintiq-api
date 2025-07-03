@@ -34,24 +34,44 @@ def export_to_excel():
 
     data = []
     for r in rows:
-        data.append({
-            "issuer": r.issuer,
-            "card_name": r.card_name,
+        # data.append({
+        #     "issuer": r.issuer,
+        #     "card_name": r.card_name,
+        #    # "report_date": r.report_date,
+        #     "min_apr": r.min_apr,
+        #     "max_apr": r.max_apr,
+        #    # "cash_advance_apr": r.cash_advance_apr,
+        #     "late_fee": r.late_fee,
+        #    "anual_fee": r.annual_fee,
+        #     "foreign_txn_fee": r.foreign_txn_fee,
+        #     "rewards_structure": r.rewards_structure,
+        #    # "category": r.category,
+        #     "exclusions": r.exclusions,
+        #     "card_type": r.card_type,
+        #     "quarter": r.quarter,
+        #     "year": r.year,
+        #     "promote_quarter": r.promote_quarter,
+        #     "promote_year": r.promote_year,
+        # })
+         data.append({
+            "Issuer": r.issuer,
+            "CardName": r.card_name,
            # "report_date": r.report_date,
-            "min_apr": r.min_apr,
-            "max_apr": r.max_apr,
-           # "cash_advance_apr": r.cash_advance_apr,
-            "late_fee": r.late_fee,
-           # "anual_fee": r.anual_fee,
-            "foreign_txn_fee": r.foreign_txn_fee,
-            "rewards_structure": r.rewards_structure,
+            "MinAPR": r.min_apr,
+            "MaxAPR": r.max_apr,
+           "CashAdvanceAPR": r.cash_advance_fee,
+            "LateFee": r.late_fee,
+           "AnnualFee": r.annual_fee,
+            "ForeignTransactionFee": r.foreign_txn_fee,
+            "RewardsCategories": r.rewards,
            # "category": r.category,
-            "exclusions": r.exclusions,
+            "NotableExclusions": r.exclusions,
             "card_type": r.card_type,
-            "quarter": r.quarter,
-            "year": r.year,
+            "Quarter": r.quarter,
+            "Year": r.year,
             "promote_quarter": r.promote_quarter,
             "promote_year": r.promote_year,
+            "MinimumInterestCharge": r.min_interest_charge,
         })
 
     df = pd.DataFrame(data)
