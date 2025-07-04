@@ -68,6 +68,7 @@ def ask_openai(text: str) -> dict:
 - Min APR (%)
 - Max APR (%)
 - Penalty APR (%)
+- Cash Advance APR (%)
 - Annual Fee ($)
 - Late Fee ($)
 - Foreign Transaction Fee (%)
@@ -347,6 +348,7 @@ def process_pdf_file(pdf_path: str, quarter: str, year: int, db: Session, filena
         existing.min_apr = clean_field(data.get("Min APR (%)"))
         existing.max_apr = clean_field(data.get("Max APR (%)"))
         existing.penalty_apr = clean_field(data.get("Penalty APR (%)"))
+        existing.cash_advance_apr = clean_field(data.get("Cash Advance APR (%)"))
         existing.annual_fee = clean_field(data.get("Annual Fee ($)"))
         existing.late_fee = clean_field(data.get("Late Fee ($)"))
         existing.foreign_txn_fee = clean_field(data.get("Foreign Transaction Fee (%)"))
@@ -376,6 +378,7 @@ def process_pdf_file(pdf_path: str, quarter: str, year: int, db: Session, filena
         min_apr=clean_field(data.get("Min APR (%)")),
         max_apr=clean_field(data.get("Max APR (%)")),
         penalty_apr=clean_field(data.get("Penalty APR (%)")),
+        cash_advance_apr = clean_field(data.get("Cash Advance APR (%)")),
         annual_fee=clean_field(data.get("Annual Fee ($)")),
         late_fee=clean_field(data.get("Late Fee ($)")),
         foreign_txn_fee=clean_field(data.get("Foreign Transaction Fee (%)")),
