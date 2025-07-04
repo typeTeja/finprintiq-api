@@ -135,10 +135,10 @@ def get_data(quarter: str = "", year: int = 0):
     return JSONResponse(content=records)
 
 @app.get("/export")
-def export():
-    path = export_to_excel()
+def export(quarter: str = "", year: int = 0):
+    path = export_to_excel(quarter=quarter, year=year)
     return FileResponse(
         path=path,
-        filename="extracted_data.xlsx",
+        filename=f"extracted_data_{f'Q{quarter}_' if quarter else ''}{year if year else 'all'}.xlsx",
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
