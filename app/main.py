@@ -136,9 +136,39 @@ def get_data(quarter: str = "", year: int = 0):
 
 @app.get("/export")
 def export(quarter: str = "", year: int = 0):
-    path = export_to_excel(quarter=quarter, year=year)
-    return FileResponse(
-        path=path,
-        filename=f"extracted_data_{f'Q{quarter}_' if quarter else ''}{year if year else 'all'}.xlsx",
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    import io
+    import pandas as pd
+    from fastapi.responses import StreamingResponse
+    
+    # Get the data as a DataFrame
+    db = SessionLocal()
+    try:
+        # Get the data as a list of dictionaries
+        data = fetch_filtered_data(db, quarter, year)
+        
+        # Convert to DataFrame
+        df = pd.DataFrame(data)
+        
+        # Create a BytesIO buffer
+        buffer = io.BytesIO()
+        
+        # Write Excel file to buffer
+        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+            df.to_excel(writer, index=False, sheet_name='Credit Card Data')
+            
+        # Move to the beginning of the buffer
+        buffer.seek(0)
+        
+        # Create a streaming response
+        filename = f"extracted_data_{f'Q{quarter}_' if quarter else ''}{year if year else 'all'}.xlsx"
+        
+        return StreamingResponse(
+            buffer,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            }
+        )
+    finally:
+        db.close()

@@ -416,7 +416,7 @@
       }
       
       // Handle export to Excel
-      document.getElementById('export-excel').addEventListener('click', function() {
+      document.getElementById('export-excel').addEventListener('click', async function() {
         const quarter = document.getElementById('filter-quarter').value;
         const year = document.getElementById('filter-year').value;
         
@@ -431,8 +431,41 @@
           url += '?' + params.toString();
         }
         
-        // Trigger the download
-        window.location.href = url;
+        try {
+          // Create a temporary link and trigger download
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error('Export failed');
+          }
+          
+          // Get filename from content-disposition header or generate one
+          const contentDisposition = response.headers.get('content-disposition');
+          let filename = `export_${new Date().toISOString().split('T')[0]}.xlsx`;
+          
+          if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+            if (filenameMatch && filenameMatch[1]) {
+              filename = filenameMatch[1];
+            }
+          }
+          
+          // Create blob and download
+          const blob = await response.blob();
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          
+          // Clean up
+          window.URL.revokeObjectURL(downloadUrl);
+          document.body.removeChild(a);
+          
+        } catch (error) {
+          console.error('Export failed:', error);
+          showAlert('Failed to download export. Please try again.', 'danger');
+        }
       });
       
       // Event listeners for filter controls
