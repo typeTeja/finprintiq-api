@@ -21,6 +21,7 @@ class ExtractedCard(Base):
     min_apr = Column(String(50), nullable=True)
     max_apr = Column(String(50), nullable=True)
     penalty_apr = Column(String(255), nullable=True)
+    cash_advance_apr = Column(Integer, nullable=True)
     annual_fee = Column(String(255), nullable=True)
     late_fee = Column(String(255), nullable=True)
     foreign_txn_fee = Column(String(255), nullable=True)

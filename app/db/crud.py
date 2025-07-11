@@ -3,6 +3,8 @@ from app.db.models import ExtractedCard
 import pandas as pd
 import os
 from app.core.config import settings
+from app.db.database import SessionLocal
+
 
 def fetch_filtered_data(db: Session, quarter: str = "", year: int = 0):
     q = db.query(ExtractedCard)
@@ -13,28 +15,91 @@ def fetch_filtered_data(db: Session, quarter: str = "", year: int = 0):
     rows = q.all()
     return [
         {
-            "issuer": r.issuer,
-            "card_name": r.card_name,
-            "min_apr": r.min_apr,
-            "max_apr": r.max_apr,
-            "late_fee": r.late_fee,
-            "foreign_txn_fee": r.foreign_txn_fee,
-            "quarter": r.quarter,
-            "year": r.year
+            "Issuer": r.issuer,
+            "CardName": r.card_name,
+            # "report_date": r.report_date,
+            "MinAPR": r.min_apr,
+            "MaxAPR": r.max_apr,
+            "CashAdvanceAPR": r.cash_advance_apr,
+            "LateFee": r.late_fee,
+            "BalanceTransferFeePct":r.balance_transfer_fee,
+            "AnnualFee": r.annual_fee,
+            "CashAdvanceFee": r.cash_advance_fee,
+            "ForeignTransactionFee": r.foreign_txn_fee,
+            "RewardsCategories": r.rewards,
+         #  "category": r.category,
+            "NotableExclusions": r.exclusions,
+            "ChangeDescription": r.change_description,
+            "changeType":r.change_type,
+            "card_type": r.card_type,
+            "InstitutionType": r.institution_type,
+            "Quarter": r.quarter,
+            "Year": r.year,
+            "promote_quarter": r.promote_quarter,
+            "promote_year": r.promote_year,
+            "MinimumInterestCharge": r.min_interest_charge,
         }
         for r in rows
     ]
 
-def export_to_excel():
-    from app.db.database import SessionLocal
+
+def export_to_excel(quarter: str = "", year: int = 0) -> str:
+    """
+    Export filtered card data to an Excel file.
+    
+    Args:
+        quarter: Optional quarter filter (e.g., "Q1", "Q2")
+        year: Optional year filter (e.g., 2023)
+        
+    Returns:
+        str: Path to the generated Excel file
+    """
     db = SessionLocal()
-    rows = db.query(ExtractedCard).all()
-    data = []
-    for r in rows:
-        d = r.__dict__.copy()
-        d.pop("_sa_instance_state", None)
-        data.append(d)
-    df = pd.DataFrame(data)
-    os.makedirs(os.path.dirname(settings.OUTPUT_XLSX), exist_ok=True)
-    df.to_excel(settings.OUTPUT_XLSX, index=False)
-    return settings.OUTPUT_XLSX
+    try:
+        # Apply filters directly in the query
+        query = db.query(ExtractedCard)
+        
+        if year:
+            query = query.filter(ExtractedCard.year == year)
+        if quarter:
+            query = query.filter(ExtractedCard.quarter == quarter)
+            
+        # Get the filtered data
+        rows = query.all()
+        
+        # Convert to the required format
+        data = [
+            {
+                "Issuer": r.issuer,
+                "CardName": r.card_name,
+                "MinAPR": r.min_apr,
+                "MaxAPR": r.max_apr,
+                "CashAdvanceAPR": r.cash_advance_apr,
+                "LateFee": r.late_fee,
+                "BalanceTransferFeePct":r.balance_transfer_fee,
+                "AnnualFee": r.annual_fee,
+                "CashAdvanceFee": r.cash_advance_fee,
+                "ForeignTransactionFee": r.foreign_txn_fee,
+                "RewardsCategories": r.rewards,
+                "NotableExclusions": r.exclusions,
+                "ChangeDescription": r.change_description,
+                "changeType":r.change_type,
+                "card_type": r.card_type,
+                "InstitutionType": r.institution_type,
+                "Quarter": r.quarter,
+                "Year": r.year,
+                "promote_quarter": r.promote_quarter,
+                "promote_year": r.promote_year,
+                "MinimumInterestCharge": r.min_interest_charge,
+            }
+            for r in rows
+        ]
+        
+        # Export to Excel
+        df = pd.DataFrame(data)
+        os.makedirs(os.path.dirname(settings.OUTPUT_XLSX), exist_ok=True)
+        df.to_excel(settings.OUTPUT_XLSX, index=False)
+        
+        return settings.OUTPUT_XLSX
+    finally:
+        db.close()
