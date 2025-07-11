@@ -16,3 +16,4 @@ python-dateutil
 anyio
 httpx
 click
+xlsxwriter
